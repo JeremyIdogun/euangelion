@@ -1,0 +1,164 @@
+import { useEffect, useState } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { getAdminSermonById, updateSermonReview, upsertSermonPillars, logReviewAction } from '../../lib/queries';
+import TagSelector from '../../components/admin/TagSelector';
+import { ArrowLeft, Save, Check } from 'lucide-react';
+
+export default function SermonEdit() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const [sermon, setSermon] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [form, setForm] = useState({ preacher: '', church: '', description: '' });
+  const [selectedPillarIds, setSelectedPillarIds] = useState([]);
+
+  useEffect(() => {
+    getAdminSermonById(id)
+      .then((s) => {
+        setSermon(s);
+        setForm({
+          preacher: s.preacher || '',
+          church: s.church || '',
+          description: s.description || '',
+        });
+        const pillarIds = s.sermon_pillars?.map((sp) => sp.pillar_id) ?? [];
+        setSelectedPillarIds(pillarIds);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  async function handleSave(reviewStatus) {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateSermonReview(id, { reviewStatus, ...form });
+      await upsertSermonPillars(id, selectedPillarIds, 'manual');
+      await logReviewAction(id, reviewStatus, '');
+      setSaved(true);
+      setTimeout(() => navigate('/admin/review'), 1000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-12 space-y-4">
+        <div className="h-8 w-64 bg-amber-100 rounded-lg animate-pulse" />
+        <div className="h-64 bg-amber-50 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (error && !sermon) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+        <p className="text-muted font-ui">{error}</p>
+        <Link to="/admin/review" className="text-accent text-sm font-ui hover:text-primary">← Back</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="max-w-3xl mx-auto px-4 py-10">
+        <Link
+          to="/admin/review"
+          className="inline-flex items-center gap-1 text-sm text-muted hover:text-primary font-ui mb-6 transition-colors"
+        >
+          <ArrowLeft size={14} />
+          Review Queue
+        </Link>
+
+        <h1
+          className="text-2xl font-bold mb-6 leading-snug"
+          style={{ color: '#8B4513', fontFamily: 'Georgia, serif' }}
+        >
+          {sermon?.title}
+        </h1>
+
+        <div className="bg-card-bg rounded-2xl p-6 shadow-soft border border-amber-50 space-y-6">
+          {/* Metadata fields */}
+          <div>
+            <label className="block text-sm font-medium text-text-main font-ui mb-1">Preacher</label>
+            <input
+              type="text"
+              value={form.preacher}
+              onChange={(e) => setForm((f) => ({ ...f, preacher: e.target.value }))}
+              className="w-full px-4 py-2 rounded-lg border border-amber-200 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-main font-ui mb-1">Church</label>
+            <input
+              type="text"
+              value={form.church}
+              onChange={(e) => setForm((f) => ({ ...f, church: e.target.value }))}
+              className="w-full px-4 py-2 rounded-lg border border-amber-200 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-main font-ui mb-1">Description</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              rows={4}
+              className="w-full px-4 py-2 rounded-lg border border-amber-200 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+            />
+          </div>
+
+          {/* Tag selector */}
+          <div>
+            <label className="block text-sm font-medium text-text-main font-ui mb-3">Pillar Tags</label>
+            <TagSelector selected={selectedPillarIds} onChange={setSelectedPillarIds} />
+          </div>
+
+          {error && <p className="text-sm text-red-600 font-ui">{error}</p>}
+          {saved && (
+            <div className="flex items-center gap-2 text-green-700 text-sm font-ui">
+              <Check size={14} />
+              Saved — redirecting…
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              onClick={() => handleSave('approved')}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2 bg-primary text-white text-sm font-ui font-medium rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
+            >
+              {saving ? null : <Check size={14} />}
+              Approve
+            </button>
+            <button
+              onClick={() => handleSave('rejected')}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2 bg-red-100 text-red-700 text-sm font-ui font-medium rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+            >
+              Reject
+            </button>
+            <button
+              onClick={() => handleSave('unreviewed')}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2 bg-amber-50 text-muted text-sm font-ui font-medium rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
+            >
+              <Save size={14} />
+              Save & Keep Pending
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
