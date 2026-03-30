@@ -7,8 +7,8 @@ import {
 } from '../lib/server/admin-auth.js';
 import { createSupabaseAdminClient } from '../lib/server/spotify.js';
 
-const supabase = createSupabaseAdminClient();
 const VALID_REVIEW_STATUSES = new Set(['approved', 'rejected', 'unreviewed']);
+let supabaseClient = null;
 
 function getAction(req) {
   const action = req.query?.action;
@@ -17,6 +17,13 @@ function getAction(req) {
 
 function methodNotAllowed(res) {
   return res.status(405).json({ error: 'Method not allowed' });
+}
+
+function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = createSupabaseAdminClient();
+  }
+  return supabaseClient;
 }
 
 async function handleLogin(req, res) {
@@ -55,6 +62,7 @@ async function handleSession(req, res) {
 async function handleStats(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
 
   const [unreviewed, approved, total, shows] = await Promise.all([
     supabase.from('sermons').select('id', { count: 'exact', head: true }).eq('review_status', 'unreviewed'),
@@ -74,6 +82,7 @@ async function handleStats(req, res) {
 async function handleShows(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
 
   const { data, error } = await supabase
     .from('spotify_shows')
@@ -90,6 +99,7 @@ async function handleShows(req, res) {
 async function handleIngestionRuns(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
 
   const requestedLimit = Number(req.query?.limit);
   const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.floor(requestedLimit) : 10;
@@ -110,6 +120,7 @@ async function handleIngestionRuns(req, res) {
 async function handlePendingSermons(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
 
   const { data, error } = await supabase
     .from('sermons')
@@ -127,6 +138,7 @@ async function handlePendingSermons(req, res) {
 async function handleSermon(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
 
   const id = String(req.query?.id || '').trim();
   if (!id) {
@@ -149,6 +161,7 @@ async function handleSermon(req, res) {
 async function handleReviewSermon(req, res) {
   if (req.method !== 'POST') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
 
   const sermonId = String(req.body?.sermonId || '').trim();
   const reviewStatus = String(req.body?.reviewStatus || '').trim();
