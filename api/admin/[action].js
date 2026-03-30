@@ -220,28 +220,33 @@ async function handleReviewSermon(req, res) {
 }
 
 export default async function handler(req, res) {
-  const action = getAction(req);
+  try {
+    const action = getAction(req);
 
-  switch (action) {
-    case 'login':
-      return handleLogin(req, res);
-    case 'logout':
-      return handleLogout(req, res);
-    case 'session':
-      return handleSession(req, res);
-    case 'stats':
-      return handleStats(req, res);
-    case 'shows':
-      return handleShows(req, res);
-    case 'ingestion-runs':
-      return handleIngestionRuns(req, res);
-    case 'pending-sermons':
-      return handlePendingSermons(req, res);
-    case 'sermon':
-      return handleSermon(req, res);
-    case 'review-sermon':
-      return handleReviewSermon(req, res);
-    default:
-      return res.status(404).json({ error: 'Not found' });
+    switch (action) {
+      case 'login':
+        return handleLogin(req, res);
+      case 'logout':
+        return handleLogout(req, res);
+      case 'session':
+        return handleSession(req, res);
+      case 'stats':
+        return handleStats(req, res);
+      case 'shows':
+        return handleShows(req, res);
+      case 'ingestion-runs':
+        return handleIngestionRuns(req, res);
+      case 'pending-sermons':
+        return handlePendingSermons(req, res);
+      case 'sermon':
+        return handleSermon(req, res);
+      case 'review-sermon':
+        return handleReviewSermon(req, res);
+      default:
+        return res.status(404).json({ error: 'Not found' });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unexpected server error';
+    return res.status(500).json({ error: message });
   }
 }

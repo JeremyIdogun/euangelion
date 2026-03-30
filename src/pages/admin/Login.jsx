@@ -53,8 +53,17 @@ export default function AdminLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Login failed');
+      const raw = await res.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = null;
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || `Login failed (${res.status})`);
+      }
       navigate(next, { replace: true });
     } catch (err) {
       setError(err.message);
@@ -122,4 +131,3 @@ export default function AdminLogin() {
     </div>
   );
 }
-
