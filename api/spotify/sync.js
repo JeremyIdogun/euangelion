@@ -1,14 +1,22 @@
 import { suggestPillars } from '../../src/lib/classifier.js';
+import { requireAdminSession } from '../../lib/server/admin-auth.js';
 import {
   createSupabaseAdminClient,
   fetchAllSpotifyShowEpisodes,
   fetchSpotifyShow,
   getSpotifyToken,
-} from './_lib/spotify.js';
+} from '../../lib/server/spotify.js';
 
-const supabase = createSupabaseAdminClient();
+let supabaseClient = null;
 
-async function syncShow(token, showId, pillarBySlug) {
+function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = createSupabaseAdminClient();
+  }
+  return supabaseClient;
+}
+
+async function syncShow(supabase, token, showId, pillarBySlug) {
   const show = await fetchSpotifyShow(token, showId);
   const episodes = await fetchAllSpotifyShowEpisodes(token, showId);
 
@@ -92,25 +100,30 @@ async function syncShow(token, showId, pillarBySlug) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { showId } = req.body;
-  if (!showId) return res.status(400).json({ error: 'showId is required' });
-
-  const { data: run } = await supabase
-    .from('ingestion_runs')
-    .insert({ spotify_show_id: showId, status: 'running' })
-    .select()
-    .single();
+  let runId = null;
 
   try {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    if (!requireAdminSession(req, res)) return;
+
+    const supabase = getSupabase();
+    const { showId } = req.body;
+    if (!showId) return res.status(400).json({ error: 'showId is required' });
+
+    const { data: run } = await supabase
+      .from('ingestion_runs')
+      .insert({ spotify_show_id: showId, status: 'running' })
+      .select()
+      .single();
+    runId = run?.id || null;
+
     const token = await getSpotifyToken();
     const { data: pillars } = await supabase.from('pillars').select('id, slug');
     const pillarBySlug = Object.fromEntries(pillars.map((p) => [p.slug, p.id]));
 
-    const { newEpisodes, updatedEpisodes } = await syncShow(token, showId, pillarBySlug);
+    const { newEpisodes, updatedEpisodes } = await syncShow(supabase, token, showId, pillarBySlug);
 
     await supabase
       .from('ingestion_runs')
@@ -119,19 +132,24 @@ export default async function handler(req, res) {
         completed_at: new Date().toISOString(),
         summary_json: { new: newEpisodes, updated: updatedEpisodes },
       })
-      .eq('id', run.id);
+      .eq('id', runId);
 
     return res.status(200).json({ newEpisodes, updatedEpisodes });
   } catch (err) {
-    await supabase
-      .from('ingestion_runs')
-      .update({
-        status: 'failed',
-        completed_at: new Date().toISOString(),
-        error_json: { message: err.message },
-      })
-      .eq('id', run?.id);
+    const message = err instanceof Error ? err.message : 'Unexpected server error';
 
-    return res.status(500).json({ error: err.message });
+    if (runId) {
+      const supabase = getSupabase();
+      await supabase
+        .from('ingestion_runs')
+        .update({
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_json: { message },
+        })
+        .eq('id', runId);
+    }
+
+    return res.status(500).json({ error: message });
   }
 }

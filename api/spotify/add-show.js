@@ -1,29 +1,42 @@
 import { suggestPillars } from '../../src/lib/classifier.js';
+import { requireAdminSession } from '../../lib/server/admin-auth.js';
 import {
   createSupabaseAdminClient,
   fetchAllSpotifyShowEpisodes,
   fetchSpotifyShow,
   getSpotifyToken,
-} from './_lib/spotify.js';
+} from '../../lib/server/spotify.js';
 
-const supabase = createSupabaseAdminClient();
+let supabaseClient = null;
+
+function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = createSupabaseAdminClient();
+  }
+  return supabaseClient;
+}
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { showId } = req.body;
-  if (!showId) return res.status(400).json({ error: 'showId is required' });
-
-  // Log ingestion run start
-  const { data: run } = await supabase
-    .from('ingestion_runs')
-    .insert({ spotify_show_id: showId, status: 'running' })
-    .select()
-    .single();
+  let runId = null;
 
   try {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    if (!requireAdminSession(req, res)) return;
+
+    const supabase = getSupabase();
+    const { showId } = req.body;
+    if (!showId) return res.status(400).json({ error: 'showId is required' });
+
+    // Log ingestion run start
+    const { data: run } = await supabase
+      .from('ingestion_runs')
+      .insert({ spotify_show_id: showId, status: 'running' })
+      .select()
+      .single();
+    runId = run?.id || null;
+
     const token = await getSpotifyToken();
     const show = await fetchSpotifyShow(token, showId);
 
@@ -112,22 +125,27 @@ export default async function handler(req, res) {
         completed_at: new Date().toISOString(),
         summary_json: { new: episodesImported, updated: 0 },
       })
-      .eq('id', run.id);
+      .eq('id', runId);
 
     return res.status(200).json({
       show: { title: show.name },
       episodesImported,
     });
   } catch (err) {
-    await supabase
-      .from('ingestion_runs')
-      .update({
-        status: 'failed',
-        completed_at: new Date().toISOString(),
-        error_json: { message: err.message },
-      })
-      .eq('id', run?.id);
+    const message = err instanceof Error ? err.message : 'Unexpected server error';
 
-    return res.status(500).json({ error: err.message });
+    if (runId) {
+      const supabase = getSupabase();
+      await supabase
+        .from('ingestion_runs')
+        .update({
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_json: { message },
+        })
+        .eq('id', runId);
+    }
+
+    return res.status(500).json({ error: message });
   }
 }

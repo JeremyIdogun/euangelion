@@ -5,7 +5,7 @@ import {
   fetchAllSpotifyShowEpisodes,
   fetchSpotifyShow,
   getSpotifyToken,
-} from '../spotify/_lib/spotify.js';
+} from '../../lib/server/spotify.js';
 
 const supabase = createSupabaseAdminClient();
 

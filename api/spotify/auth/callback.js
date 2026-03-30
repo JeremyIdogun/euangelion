@@ -1,9 +1,10 @@
+import { requireAdminSession } from '../../../lib/server/admin-auth.js';
 import {
   createSupabaseAdminClient,
   exchangeSpotifyAuthCode,
   getSpotifyRedirectUri,
   upsertSpotifyOAuthToken,
-} from '../_lib/spotify.js';
+} from '../../../lib/server/spotify.js';
 
 function parseCookies(cookieHeader = '') {
   return cookieHeader
@@ -41,6 +42,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!requireAdminSession(req, res)) return;
 
   const error = getQueryValue(req.query?.error);
   if (error) {
@@ -70,4 +72,3 @@ export default async function handler(req, res) {
     return redirectToShows(res, { spotifyAuth: 'error', reason: err.message });
   }
 }
-
