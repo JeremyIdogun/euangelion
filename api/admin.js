@@ -171,6 +171,23 @@ async function handleShows(req, res) {
   return res.status(200).json(data || []);
 }
 
+async function handlePillars(req, res) {
+  if (req.method !== 'GET') return methodNotAllowed(res);
+  if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('pillars')
+    .select('*')
+    .order('name');
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  return res.status(200).json(data || []);
+}
+
 async function handleIngestionRuns(req, res) {
   if (req.method !== 'GET') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
@@ -273,7 +290,7 @@ async function handleReviewSermonsBulk(req, res) {
     }
   }
 
-  const failed = results.filter((r) => !r.ok);
+  const failed = results.filter((result) => !result.ok);
   return res.status(200).json({
     ok: failed.length === 0,
     processed: results.length,
@@ -297,6 +314,8 @@ export default async function handler(req, res) {
         return handleStats(req, res);
       case 'shows':
         return handleShows(req, res);
+      case 'pillars':
+        return handlePillars(req, res);
       case 'ingestion-runs':
         return handleIngestionRuns(req, res);
       case 'pending-sermons':

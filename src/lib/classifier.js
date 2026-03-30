@@ -6,11 +6,25 @@
 
 const RULES = [
   {
+    slug: 'faith',
+    keywords: [
+      'faith', 'trust god', 'trust in god', 'believe', 'belief', 'walk by faith',
+      'confidence in god', 'faithful', 'hope in god',
+    ],
+  },
+  {
     slug: 'holy-spirit',
     keywords: [
       'holy spirit', 'spirit-filled', 'pentecost', 'comforter', 'ruach',
       'holy ghost', 'baptism of the spirit', 'filled with the spirit',
       'spirit of god', 'anointing', 'outpouring',
+    ],
+  },
+  {
+    slug: 'finance',
+    keywords: [
+      'finance', 'financial', 'money', 'wealth', 'prosperity', 'stewardship',
+      'budget', 'debt', 'giving', 'tithe', 'tithing', 'provision',
     ],
   },
   {
@@ -28,10 +42,11 @@ const RULES = [
     ],
   },
   {
-    slug: 'prophecy',
+    slug: 'sex-identity',
     keywords: [
-      'prophecy', 'prophetic', 'word of the lord', 'thus says the lord',
-      'prophesy', 'prophet', 'prophetess', 'prophetical', 'oracle',
+      'sex', 'sexual', 'sexuality', 'identity', 'gender', 'purity',
+      'temptation', 'lust', 'marriage bed', 'same-sex', 'orientation',
+      'identity in christ', 'manhood', 'womanhood', 'modesty',
     ],
   },
   {

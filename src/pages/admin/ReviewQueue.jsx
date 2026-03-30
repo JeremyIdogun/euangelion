@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
+  getAdminPillars,
   getPendingReviewSermons,
-  getPillars,
   saveAdminSermonReview,
   saveAdminSermonReviewsBulk,
 } from '../../lib/queries';
@@ -23,10 +23,7 @@ export default function ReviewQueue() {
   const getDraftPillarIds = useCallback((sermon) => {
     const draft = draftPillarIdsBySermonId[sermon.id];
     if (Array.isArray(draft)) return draft;
-
-    return sermon.sermon_pillars
-      ?.map((sp) => sp.pillar_id)
-      .filter(Boolean) ?? [];
+    return sermon.sermon_pillars?.map((sp) => sp.pillar_id).filter(Boolean) ?? [];
   }, [draftPillarIdsBySermonId]);
 
   const load = useCallback(async () => {
@@ -36,7 +33,7 @@ export default function ReviewQueue() {
     try {
       const [pending, allPillars] = await Promise.all([
         getPendingReviewSermons(),
-        getPillars(),
+        getAdminPillars(),
       ]);
 
       setSermons(pending);
@@ -120,7 +117,6 @@ export default function ReviewQueue() {
 
   async function reviewBulk(reviewStatus) {
     if (!selectedSermonIds.length) return;
-
     const selectedSermons = sermons.filter((sermon) => selectedSermonIds.includes(sermon.id));
     if (!selectedSermons.length) return;
 
