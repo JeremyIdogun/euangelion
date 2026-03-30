@@ -26,6 +26,81 @@ function getSupabase() {
   return supabaseClient;
 }
 
+function parseReviewPayload(input) {
+  const sermonId = String(input?.sermonId || '').trim();
+  const reviewStatus = String(input?.reviewStatus || '').trim();
+  const preacher = input?.preacher ?? '';
+  const church = input?.church ?? '';
+  const description = input?.description ?? '';
+  const rawPillarIds = Array.isArray(input?.pillarIds) ? input.pillarIds : [];
+  const pillarIds = [...new Set(rawPillarIds.filter(Boolean))];
+
+  if (!sermonId) {
+    throw new Error('sermonId is required');
+  }
+  if (!VALID_REVIEW_STATUSES.has(reviewStatus)) {
+    throw new Error('Invalid reviewStatus');
+  }
+
+  return { sermonId, reviewStatus, preacher, church, description, pillarIds };
+}
+
+async function applyReviewDecision(supabase, payload) {
+  const { sermonId, reviewStatus, preacher, church, description, pillarIds } = payload;
+
+  const { error: updateError } = await supabase
+    .from('sermons')
+    .update({
+      review_status: reviewStatus,
+      preacher,
+      church,
+      description,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sermonId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  const { error: deleteError } = await supabase
+    .from('sermon_pillars')
+    .delete()
+    .eq('sermon_id', sermonId)
+    .eq('source', 'manual');
+
+  if (deleteError) {
+    throw new Error(deleteError.message);
+  }
+
+  if (pillarIds.length) {
+    const rows = pillarIds.map((pid) => ({
+      sermon_id: sermonId,
+      pillar_id: pid,
+      source: 'manual',
+      confidence_score: 1.0,
+    }));
+
+    const { error: upsertError } = await supabase
+      .from('sermon_pillars')
+      .upsert(rows, { onConflict: 'sermon_id,pillar_id' });
+
+    if (upsertError) {
+      throw new Error(upsertError.message);
+    }
+  }
+
+  const { error: logError } = await supabase.from('admin_review_log').insert({
+    sermon_id: sermonId,
+    action: reviewStatus,
+    notes: '',
+  });
+
+  if (logError) {
+    throw new Error(logError.message);
+  }
+}
+
 async function handleLogin(req, res) {
   if (req.method !== 'POST') return methodNotAllowed(res);
 
@@ -162,74 +237,49 @@ async function handleReviewSermon(req, res) {
   if (req.method !== 'POST') return methodNotAllowed(res);
   if (!requireAdminSession(req, res)) return;
   const supabase = getSupabase();
-
-  const sermonId = String(req.body?.sermonId || '').trim();
-  const reviewStatus = String(req.body?.reviewStatus || '').trim();
-  const preacher = req.body?.preacher ?? '';
-  const church = req.body?.church ?? '';
-  const description = req.body?.description ?? '';
-  const pillarIds = Array.isArray(req.body?.pillarIds) ? req.body.pillarIds : [];
-
-  if (!sermonId) {
-    return res.status(400).json({ error: 'sermonId is required' });
-  }
-  if (!VALID_REVIEW_STATUSES.has(reviewStatus)) {
-    return res.status(400).json({ error: 'Invalid reviewStatus' });
+  let payload;
+  try {
+    payload = parseReviewPayload(req.body);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Invalid request';
+    return res.status(400).json({ error: message });
   }
 
-  const { error: updateError } = await supabase
-    .from('sermons')
-    .update({
-      review_status: reviewStatus,
-      preacher,
-      church,
-      description,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', sermonId);
+  await applyReviewDecision(supabase, payload);
+  return res.status(200).json({ ok: true });
+}
 
-  if (updateError) {
-    return res.status(500).json({ error: updateError.message });
+async function handleReviewSermonsBulk(req, res) {
+  if (req.method !== 'POST') return methodNotAllowed(res);
+  if (!requireAdminSession(req, res)) return;
+  const supabase = getSupabase();
+
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  if (!items.length) {
+    return res.status(400).json({ error: 'items is required' });
   }
 
-  const { error: deleteError } = await supabase
-    .from('sermon_pillars')
-    .delete()
-    .eq('sermon_id', sermonId)
-    .eq('source', 'manual');
+  const results = [];
 
-  if (deleteError) {
-    return res.status(500).json({ error: deleteError.message });
-  }
-
-  if (pillarIds.length) {
-    const rows = pillarIds.map((pid) => ({
-      sermon_id: sermonId,
-      pillar_id: pid,
-      source: 'manual',
-      confidence_score: 1.0,
-    }));
-
-    const { error: upsertError } = await supabase
-      .from('sermon_pillars')
-      .upsert(rows, { onConflict: 'sermon_id,pillar_id' });
-
-    if (upsertError) {
-      return res.status(500).json({ error: upsertError.message });
+  for (const item of items) {
+    try {
+      const payload = parseReviewPayload(item);
+      await applyReviewDecision(supabase, payload);
+      results.push({ sermonId: payload.sermonId, ok: true });
+    } catch (err) {
+      const sermonId = String(item?.sermonId || '').trim() || null;
+      const message = err instanceof Error ? err.message : 'Unexpected server error';
+      results.push({ sermonId, ok: false, error: message });
     }
   }
 
-  const { error: logError } = await supabase.from('admin_review_log').insert({
-    sermon_id: sermonId,
-    action: reviewStatus,
-    notes: '',
+  const failed = results.filter((r) => !r.ok);
+  return res.status(200).json({
+    ok: failed.length === 0,
+    processed: results.length,
+    failed: failed.length,
+    results,
   });
-
-  if (logError) {
-    return res.status(500).json({ error: logError.message });
-  }
-
-  return res.status(200).json({ ok: true });
 }
 
 export default async function handler(req, res) {
@@ -255,6 +305,8 @@ export default async function handler(req, res) {
         return handleSermon(req, res);
       case 'review-sermon':
         return handleReviewSermon(req, res);
+      case 'review-sermons-bulk':
+        return handleReviewSermonsBulk(req, res);
       default:
         return res.status(404).json({ error: 'Not found' });
     }

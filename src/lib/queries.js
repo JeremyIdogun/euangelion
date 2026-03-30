@@ -131,3 +131,11 @@ export async function saveAdminSermonReview({
     }),
   });
 }
+
+export async function saveAdminSermonReviewsBulk(items) {
+  return adminFetch('/api/admin/review-sermons-bulk', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
+  });
+}

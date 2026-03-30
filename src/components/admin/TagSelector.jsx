@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { getPillars } from '../../lib/queries';
 
-export default function TagSelector({ selected = [], onChange }) {
+export default function TagSelector({ selected = [], onChange, pillars: providedPillars = null }) {
   const [pillars, setPillars] = useState([]);
 
   useEffect(() => {
+    if (Array.isArray(providedPillars) && providedPillars.length) {
+      setPillars(providedPillars);
+      return;
+    }
     getPillars().then(setPillars).catch(console.error);
-  }, []);
+  }, [providedPillars]);
 
   function toggle(id) {
     if (selected.includes(id)) {
