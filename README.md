@@ -13,6 +13,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
 SPOTIFY_MARKET=US
+SPOTIFY_REDIRECT_URI=https://your-domain.com/api/spotify/auth/callback
 ADMIN_EMAIL=
 ADMIN_PASSWORD=
 CRON_SECRET=
@@ -21,6 +22,7 @@ CRON_SECRET=
 Notes:
 - `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` are used for Spotify client credentials flow (server-side only).
 - `SPOTIFY_MARKET` controls episode availability lookup (`US` default).
+- `SPOTIFY_REDIRECT_URI` must match the Redirect URI configured in your Spotify app dashboard.
 - `SUPABASE_SERVICE_ROLE_KEY` is required by API routes that write ingestion data.
 
 ## 2. Database setup
@@ -28,6 +30,7 @@ Notes:
 Run the initial migration and seed:
 
 - [`supabase/migrations/001_initial.sql`](/Users/jeremyidogun/Desktop/Projects/euangelion/supabase/migrations/001_initial.sql)
+- [`supabase/migrations/002_spotify_oauth.sql`](/Users/jeremyidogun/Desktop/Projects/euangelion/supabase/migrations/002_spotify_oauth.sql)
 - [`supabase/seed.sql`](/Users/jeremyidogun/Desktop/Projects/euangelion/supabase/seed.sql)
 
 You can run these using Supabase SQL editor or your local Supabase CLI workflow.
@@ -81,6 +84,15 @@ Authorization: Bearer <CRON_SECRET>
 
 Configured in [`vercel.json`](/Users/jeremyidogun/Desktop/Projects/euangelion/vercel.json) at `0 3 * * *`.
 
+### Saved Episodes (OAuth user import)
+
+1. Visit `/api/spotify/auth/start` (or use the Admin Shows page "Connect Spotify" button).
+2. Authorize with your Spotify account.
+3. Spotify redirects to `/api/spotify/auth/callback`, which stores refresh/access tokens in Supabase.
+4. Trigger `POST /api/spotify/import-saved` (or use "Import Saved Episodes" in Admin Shows).
+
+This imports episodes from Spotify `GET /me/episodes` into `sermons` and `spotify_shows`.
+
 ## 4. Local run
 
 ```bash
@@ -124,4 +136,12 @@ Cron sync:
 ```bash
 curl http://localhost:3000/api/cron/sync-shows \
   -H "Authorization: Bearer <CRON_SECRET>"
+```
+
+Import saved episodes:
+
+```bash
+curl -X POST http://localhost:3000/api/spotify/import-saved \
+  -H "Content-Type: application/json" \
+  -d '{}'
 ```
