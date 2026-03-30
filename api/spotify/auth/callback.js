@@ -1,10 +1,10 @@
-import { requireAdminSession } from '../../_lib/admin-auth.js';
+import { requireAdminSession } from '../../../lib/server/admin-auth.js';
 import {
   createSupabaseAdminClient,
   exchangeSpotifyAuthCode,
   getSpotifyRedirectUri,
   upsertSpotifyOAuthToken,
-} from '../_lib/spotify.js';
+} from '../../../lib/server/spotify.js';
 
 function parseCookies(cookieHeader = '') {
   return cookieHeader

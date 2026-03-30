@@ -1,5 +1,5 @@
-import { requireAdminSession } from '../_lib/admin-auth.js';
-import { createSupabaseAdminClient, getStoredSpotifyOAuthToken } from './_lib/spotify.js';
+import { requireAdminSession } from '../../lib/server/admin-auth.js';
+import { createSupabaseAdminClient, getStoredSpotifyOAuthToken } from '../../lib/server/spotify.js';
 
 const supabase = createSupabaseAdminClient();
 

@@ -1,11 +1,11 @@
 import { suggestPillars } from '../../src/lib/classifier.js';
-import { requireAdminSession } from '../_lib/admin-auth.js';
+import { requireAdminSession } from '../../lib/server/admin-auth.js';
 import {
   createSupabaseAdminClient,
   fetchAllSpotifyShowEpisodes,
   fetchSpotifyShow,
   getSpotifyToken,
-} from './_lib/spotify.js';
+} from '../../lib/server/spotify.js';
 
 const supabase = createSupabaseAdminClient();
 

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
-import { requireAdminSession } from '../../_lib/admin-auth.js';
-import { getSpotifyAuthUrl } from '../_lib/spotify.js';
+import { requireAdminSession } from '../../../lib/server/admin-auth.js';
+import { getSpotifyAuthUrl } from '../../../lib/server/spotify.js';
 
 function isSecureRequest(req) {
   const forwardedProto = req.headers['x-forwarded-proto'];
