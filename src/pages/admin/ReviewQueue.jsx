@@ -1,22 +1,175 @@
 import { useEffect, useState, useCallback } from 'react';
-import { getPendingReviewSermons } from '../../lib/queries';
+import {
+  getAdminPillars,
+  getPendingReviewSermons,
+  saveAdminSermonReview,
+  saveAdminSermonReviewsBulk,
+} from '../../lib/queries';
 import ReviewQueueTable from '../../components/admin/ReviewQueueTable';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 export default function ReviewQueue() {
   const [sermons, setSermons] = useState([]);
+  const [pillars, setPillars] = useState([]);
+  const [draftPillarIdsBySermonId, setDraftPillarIdsBySermonId] = useState({});
+  const [selectedSermonIds, setSelectedSermonIds] = useState([]);
+  const [savingBySermonId, setSavingBySermonId] = useState({});
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
 
-  const load = useCallback(() => {
+  const getDraftPillarIds = useCallback((sermon) => {
+    const draft = draftPillarIdsBySermonId[sermon.id];
+    if (Array.isArray(draft)) return draft;
+    return sermon.sermon_pillars?.map((sp) => sp.pillar_id).filter(Boolean) ?? [];
+  }, [draftPillarIdsBySermonId]);
+
+  const load = useCallback(async () => {
     setLoading(true);
-    getPendingReviewSermons()
-      .then(setSermons)
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    setError(null);
+
+    try {
+      const [pending, allPillars] = await Promise.all([
+        getPendingReviewSermons(),
+        getAdminPillars(),
+      ]);
+
+      setSermons(pending);
+      setPillars(allPillars);
+      setSelectedSermonIds([]);
+
+      const initialDraft = {};
+      pending.forEach((sermon) => {
+        initialDraft[sermon.id] = sermon.sermon_pillars?.map((sp) => sp.pillar_id).filter(Boolean) ?? [];
+      });
+      setDraftPillarIdsBySermonId(initialDraft);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  function updateDraftPillarIds(sermonId, pillarIds) {
+    setDraftPillarIdsBySermonId((prev) => ({
+      ...prev,
+      [sermonId]: pillarIds,
+    }));
+  }
+
+  function toggleSermonSelection(sermonId) {
+    setSelectedSermonIds((prev) => {
+      if (prev.includes(sermonId)) {
+        return prev.filter((id) => id !== sermonId);
+      }
+      return [...prev, sermonId];
+    });
+  }
+
+  function toggleAllSermonSelection(selected) {
+    if (!selected) {
+      setSelectedSermonIds([]);
+      return;
+    }
+    setSelectedSermonIds(sermons.map((sermon) => sermon.id));
+  }
+
+  async function reviewOne(sermonId, reviewStatus) {
+    const sermon = sermons.find((row) => row.id === sermonId);
+    if (!sermon) return;
+
+    setError(null);
+    setNotice(null);
+    setSavingBySermonId((prev) => ({ ...prev, [sermonId]: true }));
+
+    try {
+      await saveAdminSermonReview({
+        sermonId,
+        reviewStatus,
+        preacher: sermon.preacher ?? '',
+        church: sermon.church ?? '',
+        description: sermon.description ?? '',
+        pillarIds: getDraftPillarIds(sermon),
+      });
+
+      setSermons((prev) => prev.filter((row) => row.id !== sermonId));
+      setSelectedSermonIds((prev) => prev.filter((id) => id !== sermonId));
+      setDraftPillarIdsBySermonId((prev) => {
+        const next = { ...prev };
+        delete next[sermonId];
+        return next;
+      });
+      setNotice(`Sermon ${reviewStatus === 'approved' ? 'approved' : 'rejected'}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSavingBySermonId((prev) => {
+        const next = { ...prev };
+        delete next[sermonId];
+        return next;
+      });
+    }
+  }
+
+  async function reviewBulk(reviewStatus) {
+    if (!selectedSermonIds.length) return;
+    const selectedSermons = sermons.filter((sermon) => selectedSermonIds.includes(sermon.id));
+    if (!selectedSermons.length) return;
+
+    setBulkSaving(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const payload = selectedSermons.map((sermon) => ({
+        sermonId: sermon.id,
+        reviewStatus,
+        preacher: sermon.preacher ?? '',
+        church: sermon.church ?? '',
+        description: sermon.description ?? '',
+        pillarIds: getDraftPillarIds(sermon),
+      }));
+
+      const result = await saveAdminSermonReviewsBulk(payload);
+      const failedIds = new Set(
+        (result.results || [])
+          .filter((row) => row.ok === false && row.sermonId)
+          .map((row) => row.sermonId),
+      );
+
+      const successfulIds = selectedSermons
+        .map((sermon) => sermon.id)
+        .filter((id) => !failedIds.has(id));
+
+      if (successfulIds.length) {
+        setSermons((prev) => prev.filter((sermon) => !successfulIds.includes(sermon.id)));
+        setDraftPillarIdsBySermonId((prev) => {
+          const next = { ...prev };
+          successfulIds.forEach((id) => delete next[id]);
+          return next;
+        });
+      }
+
+      setSelectedSermonIds((prev) => prev.filter((id) => !successfulIds.includes(id)));
+
+      if (result.failed) {
+        const firstError = (result.results || []).find((row) => row.ok === false)?.error;
+        setError(`Bulk update completed with ${result.failed} failures.${firstError ? ` ${firstError}` : ''}`);
+      } else {
+        setNotice(
+          `${reviewStatus === 'approved' ? 'Approved' : 'Rejected'} ${result.processed} sermon${result.processed === 1 ? '' : 's'}.`,
+        );
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBulkSaving(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,8 +199,24 @@ export default function ReviewQueue() {
           Review imported sermons, approve or correct pillar tags.
         </p>
 
+        {error && <p className="text-sm text-red-600 font-ui mb-4">{error}</p>}
+        {notice && <p className="text-sm text-green-700 font-ui mb-4">{notice}</p>}
+
         <div className="bg-card-bg rounded-2xl p-6 shadow-soft border border-amber-50">
-          <ReviewQueueTable sermons={sermons} loading={loading} />
+          <ReviewQueueTable
+            sermons={sermons}
+            pillars={pillars}
+            loading={loading}
+            selectedSermonIds={selectedSermonIds}
+            draftPillarIdsBySermonId={draftPillarIdsBySermonId}
+            savingBySermonId={savingBySermonId}
+            bulkSaving={bulkSaving}
+            onToggleSermonSelection={toggleSermonSelection}
+            onToggleAllSermonSelection={toggleAllSermonSelection}
+            onUpdateDraftPillarIds={updateDraftPillarIds}
+            onReviewOne={reviewOne}
+            onReviewBulk={reviewBulk}
+          />
         </div>
       </div>
     </div>

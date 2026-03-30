@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
-import { getPillars } from '../../lib/queries';
+import { getAdminPillars, getPillars } from '../../lib/queries';
 
-export default function TagSelector({ selected = [], onChange }) {
+export default function TagSelector({
+  selected = [],
+  onChange,
+  pillars: providedPillars = null,
+  source = 'public',
+}) {
   const [pillars, setPillars] = useState([]);
 
   useEffect(() => {
-    getPillars().then(setPillars).catch(console.error);
-  }, []);
+    if (Array.isArray(providedPillars)) {
+      setPillars(providedPillars);
+      return;
+    }
+
+    const loader = source === 'admin' ? getAdminPillars : getPillars;
+    loader().then(setPillars).catch(console.error);
+  }, [providedPillars, source]);
 
   function toggle(id) {
     if (selected.includes(id)) {

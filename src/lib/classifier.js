@@ -6,11 +6,25 @@
 
 const RULES = [
   {
+    slug: 'faith',
+    keywords: [
+      'faith', 'trust god', 'trust in god', 'believe', 'belief', 'walk by faith',
+      'confidence in god', 'faithful', 'hope in god',
+    ],
+  },
+  {
     slug: 'holy-spirit',
     keywords: [
       'holy spirit', 'spirit-filled', 'pentecost', 'comforter', 'ruach',
       'holy ghost', 'baptism of the spirit', 'filled with the spirit',
       'spirit of god', 'anointing', 'outpouring',
+    ],
+  },
+  {
+    slug: 'finance',
+    keywords: [
+      'finance', 'financial', 'money', 'wealth', 'prosperity', 'stewardship',
+      'budget', 'debt', 'giving', 'tithe', 'tithing', 'provision',
     ],
   },
   {

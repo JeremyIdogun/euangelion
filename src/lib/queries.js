@@ -94,6 +94,10 @@ export async function getSpotifyShows() {
   return adminFetch('/api/admin/shows');
 }
 
+export async function getAdminPillars() {
+  return adminFetch('/api/admin/pillars');
+}
+
 export async function getIngestionRuns(limit = 10) {
   return adminFetch(`/api/admin/ingestion-runs?limit=${encodeURIComponent(limit)}`);
 }
@@ -129,5 +133,13 @@ export async function saveAdminSermonReview({
       description,
       pillarIds,
     }),
+  });
+}
+
+export async function saveAdminSermonReviewsBulk(items) {
+  return adminFetch('/api/admin/review-sermons-bulk', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items }),
   });
 }

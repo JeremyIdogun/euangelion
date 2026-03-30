@@ -123,7 +123,11 @@ export default function SermonEdit() {
           {/* Tag selector */}
           <div>
             <label className="block text-sm font-medium text-text-main font-ui mb-3">Pillar Tags</label>
-            <TagSelector selected={selectedPillarIds} onChange={setSelectedPillarIds} />
+            <TagSelector
+              selected={selectedPillarIds}
+              onChange={setSelectedPillarIds}
+              source="admin"
+            />
           </div>
 
           {error && <p className="text-sm text-red-600 font-ui">{error}</p>}
