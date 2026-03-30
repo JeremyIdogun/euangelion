@@ -6,13 +6,20 @@ import {
   getSpotifyUserAccessToken,
 } from '../../lib/server/spotify.js';
 
-const supabase = createSupabaseAdminClient();
+let supabaseClient = null;
+
+function getSupabase() {
+  if (!supabaseClient) {
+    supabaseClient = createSupabaseAdminClient();
+  }
+  return supabaseClient;
+}
 
 function toDateOnly(spotifyDate) {
   return spotifyDate ? new Date(spotifyDate).toISOString().split('T')[0] : null;
 }
 
-async function upsertShow(show) {
+async function upsertShow(supabase, show) {
   if (!show?.id) return;
 
   const { error } = await supabase.from('spotify_shows').upsert(
@@ -46,7 +53,7 @@ async function fetchSavedEpisodesPage(token, url) {
   return data;
 }
 
-async function importSavedEpisodes(token, pillarBySlug, maxEpisodes = null) {
+async function importSavedEpisodes(supabase, token, pillarBySlug, maxEpisodes = null) {
   const market = getSpotifyMarket();
   let url = `https://api.spotify.com/v1/me/episodes?market=${market}&limit=50`;
 
@@ -72,7 +79,7 @@ async function importSavedEpisodes(token, pillarBySlug, maxEpisodes = null) {
       }
 
       const show = ep.show || null;
-      await upsertShow(show);
+      await upsertShow(supabase, show);
 
       const { data: existing, error: existingError } = await supabase
         .from('sermons')
@@ -164,35 +171,38 @@ async function importSavedEpisodes(token, pillarBySlug, maxEpisodes = null) {
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-  if (!requireAdminSession(req, res)) return;
-
-  const requestedMaxEpisodes = Number(req.body?.maxEpisodes);
-  const maxEpisodes =
-    Number.isFinite(requestedMaxEpisodes) && requestedMaxEpisodes > 0
-      ? Math.floor(requestedMaxEpisodes)
-      : null;
-
-  const runInsert = await supabase
-    .from('ingestion_runs')
-    .insert({ spotify_show_id: null, status: 'running' })
-    .select()
-    .single();
-
-  if (runInsert.error) {
-    return res.status(500).json({ error: `Failed to start ingestion run: ${runInsert.error.message}` });
-  }
-
-  const run = runInsert.data;
+  let runId = null;
 
   try {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+    if (!requireAdminSession(req, res)) return;
+
+    const supabase = getSupabase();
+    const requestedMaxEpisodes = Number(req.body?.maxEpisodes);
+    const maxEpisodes =
+      Number.isFinite(requestedMaxEpisodes) && requestedMaxEpisodes > 0
+        ? Math.floor(requestedMaxEpisodes)
+        : null;
+
+    const runInsert = await supabase
+      .from('ingestion_runs')
+      .insert({ spotify_show_id: null, status: 'running' })
+      .select()
+      .single();
+
+    if (runInsert.error) {
+      return res.status(500).json({ error: `Failed to start ingestion run: ${runInsert.error.message}` });
+    }
+
+    const run = runInsert.data;
+    runId = run?.id || null;
     const token = await getSpotifyUserAccessToken(supabase);
     const { data: pillars } = await supabase.from('pillars').select('id, slug');
     const pillarBySlug = Object.fromEntries((pillars || []).map((p) => [p.slug, p.id]));
 
-    const result = await importSavedEpisodes(token, pillarBySlug, maxEpisodes);
+    const result = await importSavedEpisodes(supabase, token, pillarBySlug, maxEpisodes);
 
     await supabase
       .from('ingestion_runs')
@@ -208,19 +218,24 @@ export default async function handler(req, res) {
           pages: result.pages,
         },
       })
-      .eq('id', run?.id);
+      .eq('id', runId);
 
     return res.status(200).json(result);
   } catch (err) {
-    await supabase
-      .from('ingestion_runs')
-      .update({
-        status: 'failed',
-        completed_at: new Date().toISOString(),
-        error_json: { message: err.message },
-      })
-      .eq('id', run?.id);
+    const message = err instanceof Error ? err.message : 'Unexpected server error';
 
-    return res.status(500).json({ error: err.message });
+    if (runId) {
+      const supabase = getSupabase();
+      await supabase
+        .from('ingestion_runs')
+        .update({
+          status: 'failed',
+          completed_at: new Date().toISOString(),
+          error_json: { message },
+        })
+        .eq('id', runId);
+    }
+
+    return res.status(500).json({ error: message });
   }
 }

@@ -6,6 +6,17 @@ function formatExpiry(iso) {
   return new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
+async function parseApiResponse(res) {
+  const raw = await res.text();
+  let data = null;
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    data = null;
+  }
+  return { data, raw };
+}
+
 export default function SpotifyLibraryImportCard({ authState, authReason, onImported }) {
   const [checking, setChecking] = useState(true);
   const [connected, setConnected] = useState(false);
@@ -19,8 +30,10 @@ export default function SpotifyLibraryImportCard({ authState, authReason, onImpo
     setChecking(true);
     try {
       const res = await fetch('/api/spotify/oauth-status');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to fetch Spotify connection status');
+      const { data, raw } = await parseApiResponse(res);
+      if (!res.ok) {
+        throw new Error(data?.error || raw || `Failed to fetch Spotify connection status (${res.status})`);
+      }
       setConnected(Boolean(data.connected));
       setScope(data.scope || null);
       setExpiresAt(data.expiresAt || null);
@@ -58,8 +71,10 @@ export default function SpotifyLibraryImportCard({ authState, authReason, onImpo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to import saved episodes');
+      const { data, raw } = await parseApiResponse(res);
+      if (!res.ok) {
+        throw new Error(data?.error || raw || `Failed to import saved episodes (${res.status})`);
+      }
       setResult(
         `Imported saved episodes: ${data.newEpisodes} new, ${data.updatedEpisodes} updated, ${data.skippedEpisodes} skipped.`,
       );
