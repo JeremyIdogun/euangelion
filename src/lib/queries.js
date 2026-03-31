@@ -5,10 +5,17 @@ import { supabase } from './supabase';
 export async function getPillars() {
   const { data, error } = await supabase
     .from('pillars')
-    .select('*, sermon_pillars(sermon_id)')
+    .select('*, sermon_pillars(sermon_id, sermons(review_status))')
     .order('name');
   if (error) throw error;
-  return data.map((p) => ({ ...p, sermon_count: p.sermon_pillars?.length ?? 0 }));
+  return data.map((p) => {
+    const sermonCount = (p.sermon_pillars || []).filter((sp) => {
+      const sermon = Array.isArray(sp.sermons) ? sp.sermons[0] : sp.sermons;
+      return sermon?.review_status === 'approved';
+    }).length;
+
+    return { ...p, sermon_count: sermonCount };
+  });
 }
 
 export async function getPillarBySlug(slug) {
