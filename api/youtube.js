@@ -97,6 +97,8 @@ async function ingestPlaylist({ supabase, playlistId }) {
     let newEpisodes = 0;
     let updatedEpisodes = 0;
     let skippedEpisodes = 0;
+    let failedEpisodes = 0;
+    const errorSamples = [];
 
     for (const videoId of videoIds) {
       const video = videoById[videoId];
@@ -117,7 +119,10 @@ async function ingestPlaylist({ supabase, playlistId }) {
         .maybeSingle();
 
       if (existingError) {
-        skippedEpisodes++;
+        failedEpisodes++;
+        if (errorSamples.length < 5) {
+          errorSamples.push(`Lookup failed for ${videoId}: ${existingError.message}`);
+        }
         continue;
       }
 
@@ -148,7 +153,10 @@ async function ingestPlaylist({ supabase, playlistId }) {
         .single();
 
       if (upsertError) {
-        skippedEpisodes++;
+        failedEpisodes++;
+        if (errorSamples.length < 5) {
+          errorSamples.push(`Insert failed for ${videoId}: ${upsertError.message}`);
+        }
         continue;
       }
 
@@ -182,6 +190,19 @@ async function ingestPlaylist({ supabase, playlistId }) {
       }
     }
 
+    const processedEpisodes = newEpisodes + updatedEpisodes;
+
+    if (videoIds.length > 0 && processedEpisodes === 0) {
+      if (failedEpisodes > 0) {
+        throw new Error(
+          `No YouTube videos were ingested. First error: ${errorSamples[0] || 'Unknown insert error'}`,
+        );
+      }
+      throw new Error(
+        'No usable videos were found in this playlist. The videos may be unavailable or inaccessible.',
+      );
+    }
+
     await supabase
       .from('youtube_playlists')
       .update({ last_synced_at: new Date().toISOString() })
@@ -199,7 +220,10 @@ async function ingestPlaylist({ supabase, playlistId }) {
           new: newEpisodes,
           updated: updatedEpisodes,
           skipped: skippedEpisodes,
-          processed: newEpisodes + updatedEpisodes,
+          failed: failedEpisodes,
+          processed: processedEpisodes,
+          totalVideoIds: videoIds.length,
+          error_samples: errorSamples,
         },
       })
       .eq('id', runId);
@@ -212,6 +236,10 @@ async function ingestPlaylist({ supabase, playlistId }) {
       newEpisodes,
       updatedEpisodes,
       skippedEpisodes,
+      failedEpisodes,
+      processedEpisodes,
+      totalVideoIds: videoIds.length,
+      errorSamples,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unexpected server error';
