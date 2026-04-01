@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   getAdminPillars,
   getPendingReviewSermons,
@@ -7,7 +7,9 @@ import {
 } from '../../lib/queries';
 import ReviewQueueTable from '../../components/admin/ReviewQueueTable';
 import { Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 25;
 
 export default function ReviewQueue() {
   const [sermons, setSermons] = useState([]);
@@ -19,6 +21,14 @@ export default function ReviewQueue() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(sermons.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageSermons = useMemo(() => {
+    const from = (currentPage - 1) * PAGE_SIZE;
+    return sermons.slice(from, from + PAGE_SIZE);
+  }, [sermons, currentPage]);
 
   const getDraftPillarIds = useCallback((sermon) => {
     const draft = draftPillarIdsBySermonId[sermon.id];
@@ -75,7 +85,7 @@ export default function ReviewQueue() {
       setSelectedSermonIds([]);
       return;
     }
-    setSelectedSermonIds(sermons.map((sermon) => sermon.id));
+    setSelectedSermonIds(pageSermons.map((sermon) => sermon.id));
   }
 
   async function reviewOne(sermonId, reviewStatus) {
@@ -206,7 +216,7 @@ export default function ReviewQueue() {
 
         <div className="bg-card-bg rounded-2xl p-6 shadow-soft border border-amber-50">
           <ReviewQueueTable
-            sermons={sermons}
+            sermons={pageSermons}
             pillars={pillars}
             loading={loading}
             selectedSermonIds={selectedSermonIds}
@@ -220,6 +230,46 @@ export default function ReviewQueue() {
             onReviewBulk={reviewBulk}
           />
         </div>
+
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <button
+              onClick={() => setPage(1)}
+              disabled={currentPage <= 1}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-amber-200 text-sm font-ui text-muted hover:text-primary hover:border-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={15} />
+              <ChevronLeft size={15} className="-ml-2" />
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-amber-200 text-sm font-ui text-muted hover:text-primary hover:border-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={15} />
+              Prev
+            </button>
+            <span className="text-sm font-ui text-muted px-2">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-amber-200 text-sm font-ui text-muted hover:text-primary hover:border-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+              <ChevronRight size={15} />
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={currentPage >= totalPages}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg border border-amber-200 text-sm font-ui text-muted hover:text-primary hover:border-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={15} />
+              <ChevronRight size={15} className="-ml-2" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
