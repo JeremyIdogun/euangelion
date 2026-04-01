@@ -51,6 +51,8 @@ export default function SermonDetail() {
   const embedUrl = sermon.embed_url || (sermon.spotify_episode_id
     ? `https://open.spotify.com/embed/episode/${sermon.spotify_episode_id}`
     : null);
+  const platformLabel = sermon.platform === 'youtube' ? 'YouTube' : 'Spotify';
+  const embedHeight = sermon.platform === 'youtube' ? 360 : 152;
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,7 +137,7 @@ export default function SermonDetail() {
               </p>
             )}
 
-            {/* Spotify CTA */}
+            {/* External CTA */}
             {sermon.external_url && (
               <a
                 href={sermon.external_url}
@@ -143,22 +145,23 @@ export default function SermonDetail() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-ui font-medium rounded-xl hover:bg-accent transition-colors mb-6"
               >
-                <span>Listen on Spotify</span>
+                <span>Listen on {platformLabel}</span>
                 <ExternalLink size={14} />
               </a>
             )}
 
-            {/* Spotify embed */}
+            {/* Platform embed */}
             {embedUrl && (
               <div className="rounded-xl overflow-hidden">
                 <iframe
                   src={embedUrl}
                   width="100%"
-                  height="152"
+                  height={embedHeight}
                   frameBorder="0"
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   loading="lazy"
                   title={sermon.title}
+                  allowFullScreen={sermon.platform === 'youtube'}
                 />
               </div>
             )}

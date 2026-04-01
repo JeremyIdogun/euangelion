@@ -140,6 +140,34 @@ export async function deleteSpotifyShow(id) {
   });
 }
 
+export async function getYouTubePlaylists() {
+  return adminFetch('/api/youtube/playlists');
+}
+
+export async function importYouTubePlaylist(playlistId) {
+  return adminFetch('/api/youtube/import-playlist', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playlistId }),
+  });
+}
+
+export async function syncYouTubePlaylist(playlistId) {
+  return adminFetch('/api/youtube/sync-playlist', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playlistId }),
+  });
+}
+
+export async function deleteYouTubePlaylist(id) {
+  return adminFetch('/api/youtube/playlists', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+}
+
 export async function getAdminPillars() {
   return adminFetch('/api/admin/pillars');
 }
