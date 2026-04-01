@@ -60,7 +60,7 @@ export default function Home() {
               New to the faith? Start here.
             </p>
             <Link
-              to="/pillar/faith"
+              to="/pillar/salvation"
               className="inline-flex items-center justify-center px-5 py-2.5 bg-primary text-white text-sm font-ui font-medium rounded-full hover:bg-accent transition-colors"
             >
               Start Here
