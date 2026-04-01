@@ -1,5 +1,27 @@
 import { supabase } from './supabase';
 
+function withDisplayTitle(sermon, { preserveSourceTitle = false } = {}) {
+  if (!sermon) return sermon;
+  const customTitle = typeof sermon.custom_title === 'string' ? sermon.custom_title.trim() : '';
+  const sourceTitle = sermon.title;
+
+  if (!customTitle) {
+    if (preserveSourceTitle) {
+      return { ...sermon, source_title: sourceTitle };
+    }
+    return sermon;
+  }
+
+  const next = {
+    ...sermon,
+    title: customTitle,
+  };
+  if (preserveSourceTitle) {
+    next.source_title = sourceTitle;
+  }
+  return next;
+}
+
 // ── Public queries ────────────────────────────────────────────────────────────
 
 export async function getPillars() {
@@ -36,7 +58,7 @@ export async function getSermonsByPillar(pillarId) {
     .eq('sermons.review_status', 'approved');
   if (error) throw error;
   return data
-    .map((row) => row.sermons)
+    .map((row) => withDisplayTitle(row.sermons))
     .filter(Boolean)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
@@ -47,11 +69,11 @@ export async function searchSermons(query) {
     .from('sermons')
     .select('*')
     .eq('review_status', 'approved')
-    .or(`title.ilike.${q},preacher.ilike.${q},church.ilike.${q},description.ilike.${q}`)
+    .or(`custom_title.ilike.${q},title.ilike.${q},preacher.ilike.${q},church.ilike.${q},description.ilike.${q}`)
     .order('created_at', { ascending: false })
     .limit(50);
   if (error) throw error;
-  return data;
+  return (data || []).map((sermon) => withDisplayTitle(sermon));
 }
 
 export async function getSermonById(id) {
@@ -62,7 +84,7 @@ export async function getSermonById(id) {
     .eq('review_status', 'approved')
     .single();
   if (error) throw error;
-  return data;
+  return withDisplayTitle(data);
 }
 
 export async function getLatestSermons(limit = 6) {
@@ -73,7 +95,7 @@ export async function getLatestSermons(limit = 6) {
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return data;
+  return (data || []).map((sermon) => withDisplayTitle(sermon));
 }
 
 // ── Admin queries ─────────────────────────────────────────────────────────────
@@ -126,15 +148,18 @@ export async function getIngestionRuns(limit = 10) {
 }
 
 export async function getPendingReviewSermons() {
-  return adminFetch('/api/admin/pending-sermons');
+  const data = await adminFetch('/api/admin/pending-sermons');
+  return (data || []).map((sermon) => withDisplayTitle(sermon));
 }
 
 export async function getApprovedSermons(limit = 200) {
-  return adminFetch(`/api/admin/approved-sermons?limit=${encodeURIComponent(limit)}`);
+  const data = await adminFetch(`/api/admin/approved-sermons?limit=${encodeURIComponent(limit)}`);
+  return (data || []).map((sermon) => withDisplayTitle(sermon));
 }
 
 export async function getAdminSermonById(id) {
-  return adminFetch(`/api/admin/sermon?id=${encodeURIComponent(id)}`);
+  const data = await adminFetch(`/api/admin/sermon?id=${encodeURIComponent(id)}`);
+  return withDisplayTitle(data, { preserveSourceTitle: true });
 }
 
 export async function getAdminStats() {
@@ -144,6 +169,7 @@ export async function getAdminStats() {
 export async function saveAdminSermonReview({
   sermonId,
   reviewStatus,
+  customTitle,
   preacher,
   church,
   description,
@@ -155,6 +181,7 @@ export async function saveAdminSermonReview({
     body: JSON.stringify({
       sermonId,
       reviewStatus,
+      customTitle,
       preacher,
       church,
       description,

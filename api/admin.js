@@ -59,6 +59,9 @@ function parseReviewPayload(input) {
   const preacher = input?.preacher ?? '';
   const church = input?.church ?? '';
   const description = input?.description ?? '';
+  const hasCustomTitle = Object.prototype.hasOwnProperty.call(input || {}, 'customTitle');
+  const normalizedCustomTitle = String(input?.customTitle ?? '').trim();
+  const customTitle = normalizedCustomTitle || null;
   const rawPillarIds = Array.isArray(input?.pillarIds) ? input.pillarIds : [];
   const pillarIds = [...new Set(rawPillarIds.filter(Boolean))];
 
@@ -69,21 +72,43 @@ function parseReviewPayload(input) {
     throw new Error('Invalid reviewStatus');
   }
 
-  return { sermonId, reviewStatus, preacher, church, description, pillarIds };
+  return {
+    sermonId,
+    reviewStatus,
+    preacher,
+    church,
+    description,
+    customTitle,
+    hasCustomTitle,
+    pillarIds,
+  };
 }
 
 async function applyReviewDecision(supabase, payload) {
-  const { sermonId, reviewStatus, preacher, church, description, pillarIds } = payload;
+  const {
+    sermonId,
+    reviewStatus,
+    preacher,
+    church,
+    description,
+    customTitle,
+    hasCustomTitle,
+    pillarIds,
+  } = payload;
+  const updateFields = {
+    review_status: reviewStatus,
+    preacher,
+    church,
+    description,
+    updated_at: new Date().toISOString(),
+  };
+  if (hasCustomTitle) {
+    updateFields.custom_title = customTitle;
+  }
 
   const { error: updateError } = await supabase
     .from('sermons')
-    .update({
-      review_status: reviewStatus,
-      preacher,
-      church,
-      description,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateFields)
     .eq('id', sermonId);
 
   if (updateError) {
@@ -294,7 +319,7 @@ async function handleApprovedSermons(req, res) {
 
   const { data, error } = await supabase
     .from('sermons')
-    .select('id, title, preacher, church, created_at, updated_at')
+    .select('id, title, custom_title, preacher, church, created_at, updated_at')
     .eq('review_status', 'approved')
     .order('updated_at', { ascending: false })
     .limit(limit);

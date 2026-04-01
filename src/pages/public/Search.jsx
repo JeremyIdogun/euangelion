@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Search as SearchIcon } from 'lucide-react';
 import { searchSermons } from '../../lib/queries';
 import SearchBar from '../../components/public/SearchBar';
 import SermonList from '../../components/public/SermonList';
@@ -49,7 +50,9 @@ export default function Search() {
 
         {!q && !searched && (
           <div className="text-center py-16 text-muted font-ui">
-            <p className="text-4xl mb-3">🔍</p>
+            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-primary">
+              <SearchIcon size={22} strokeWidth={2.2} aria-hidden="true" />
+            </div>
             <p>Enter a search term above to find sermons.</p>
           </div>
         )}

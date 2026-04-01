@@ -15,7 +15,7 @@ export default function SermonEdit() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
 
-  const [form, setForm] = useState({ preacher: '', church: '', description: '' });
+  const [form, setForm] = useState({ customTitle: '', preacher: '', church: '', description: '' });
   const [selectedPillarIds, setSelectedPillarIds] = useState([]);
   const prefersApprovedReturn = searchParams.get('returnTo') === 'approved';
   const isApprovedSermon = sermon?.review_status === 'approved';
@@ -27,6 +27,7 @@ export default function SermonEdit() {
       .then((s) => {
         setSermon(s);
         setForm({
+          customTitle: s.custom_title || '',
           preacher: s.preacher || '',
           church: s.church || '',
           description: s.description || '',
@@ -94,6 +95,25 @@ export default function SermonEdit() {
         </h1>
 
         <div className="bg-card-bg rounded-2xl p-6 shadow-soft border border-amber-50 space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-text-main font-ui mb-1">Display Title</label>
+            <input
+              type="text"
+              value={form.customTitle}
+              onChange={(e) => setForm((f) => ({ ...f, customTitle: e.target.value }))}
+              placeholder={sermon?.source_title || 'Use Spotify title'}
+              className="w-full px-4 py-2 rounded-lg border border-amber-200 text-sm font-ui focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+            <p className="mt-1 text-xs text-muted font-ui">
+              Leave blank to use Spotify title. This title is what users will see.
+            </p>
+            {sermon?.source_title && (
+              <p className="mt-1 text-xs text-muted font-ui">
+                Spotify title: {sermon.source_title}
+              </p>
+            )}
+          </div>
+
           {/* Metadata fields */}
           <div>
             <label className="block text-sm font-medium text-text-main font-ui mb-1">Preacher</label>

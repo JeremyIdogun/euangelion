@@ -36,6 +36,8 @@ Run the initial migration and seed:
 - [`supabase/migrations/002_spotify_oauth.sql`](supabase/migrations/002_spotify_oauth.sql)
 - [`supabase/migrations/003_admin_auth_rls.sql`](supabase/migrations/003_admin_auth_rls.sql)
 - [`supabase/migrations/004_seed_thematic_pillars.sql`](supabase/migrations/004_seed_thematic_pillars.sql)
+- [`supabase/migrations/005_refresh_thematic_pillars.sql`](supabase/migrations/005_refresh_thematic_pillars.sql)
+- [`supabase/migrations/006_sermon_custom_title.sql`](supabase/migrations/006_sermon_custom_title.sql)
 - [`supabase/seed.sql`](supabase/seed.sql)
 
 You can run these using Supabase SQL editor or your local Supabase CLI workflow.
