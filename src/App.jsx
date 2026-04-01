@@ -12,6 +12,7 @@ import SermonEdit from './pages/admin/SermonEdit';
 import ApprovedSermons from './pages/admin/ApprovedSermons';
 import Themes from './pages/admin/Themes';
 import AdminGate from './components/admin/AdminGate';
+import NotFound from './pages/NotFound';
 
 function PublicLayout({ children }) {
   return (
@@ -108,6 +109,14 @@ export default function App() {
             <AdminGate>
               <SermonEdit />
             </AdminGate>
+          }
+        />
+        <Route
+          path="*"
+          element={
+            <PublicLayout>
+              <NotFound />
+            </PublicLayout>
           }
         />
       </Routes>
