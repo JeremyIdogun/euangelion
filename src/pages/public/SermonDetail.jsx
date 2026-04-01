@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getSermonById } from '../../lib/queries';
-import { ExternalLink, ChevronRight, Calendar, User, Church } from 'lucide-react';
+import { ExternalLink, ChevronRight, Calendar, User, Church, Video, Headphones } from 'lucide-react';
 import { useMeta } from '../../hooks/useMeta';
 
 function formatDate(d) {
@@ -51,7 +51,17 @@ export default function SermonDetail() {
   const embedUrl = sermon.embed_url || (sermon.spotify_episode_id
     ? `https://open.spotify.com/embed/episode/${sermon.spotify_episode_id}`
     : null);
-  const platformLabel = sermon.platform === 'youtube' ? 'YouTube' : 'Spotify';
+  const platform = (sermon.platform || '').toLowerCase();
+  const externalCtaLabel = platform === 'youtube'
+    ? 'Watch on YouTube'
+    : platform === 'spotify'
+      ? 'Listen on Spotify'
+      : 'Open Source';
+  const CtaIcon = platform === 'youtube'
+    ? Video
+    : platform === 'spotify'
+      ? Headphones
+      : ExternalLink;
   const embedHeight = sermon.platform === 'youtube' ? 360 : 152;
 
   return (
@@ -145,8 +155,8 @@ export default function SermonDetail() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-ui font-medium rounded-xl hover:bg-accent transition-colors mb-6"
               >
-                <span>Listen on {platformLabel}</span>
-                <ExternalLink size={14} />
+                <span>{externalCtaLabel}</span>
+                <CtaIcon size={14} />
               </a>
             )}
 
