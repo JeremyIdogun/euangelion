@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Cross } from 'lucide-react';
 import { getPillars, getLatestSermons } from '../../lib/queries';
 import PillarGrid from '../../components/public/PillarGrid';
@@ -8,7 +8,8 @@ import SermonList from '../../components/public/SermonList';
 import { useMeta } from '../../hooks/useMeta';
 
 export default function Home() {
-  useMeta({});
+  const { pathname } = useLocation();
+  useMeta({ url: `${window.location.origin}${pathname}` });
   const [pillars, setPillars] = useState([]);
   const [latest, setLatest] = useState([]);
   const [loading, setLoading] = useState(true);

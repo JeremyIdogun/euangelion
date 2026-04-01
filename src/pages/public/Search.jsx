@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import { Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { searchSermons } from '../../lib/queries';
 import SearchBar from '../../components/public/SearchBar';
@@ -17,9 +17,11 @@ export default function Search() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const { pathname, search } = useLocation();
 
   useMeta({
     title: q ? `Search: ${q}` : 'Search Sermons',
+    url: `${window.location.origin}${pathname}${search}`,
   });
 
   useEffect(() => {

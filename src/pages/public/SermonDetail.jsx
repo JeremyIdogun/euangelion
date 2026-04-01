@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { getSermonById } from '../../lib/queries';
 import { ExternalLink, ChevronRight, Calendar, User, Church, Video, Headphones } from 'lucide-react';
 import { useMeta } from '../../hooks/useMeta';
@@ -11,6 +11,7 @@ function formatDate(d) {
 
 export default function SermonDetail() {
   const { id } = useParams();
+  const { pathname } = useLocation();
   const [sermon, setSermon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,6 +21,7 @@ export default function SermonDetail() {
     title: sermon?.title,
     description: sermon?.description?.slice(0, 160) || undefined,
     image: sermon?.image_url || undefined,
+    url: `${window.location.origin}${pathname}`,
   });
 
   useEffect(() => {
