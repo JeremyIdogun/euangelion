@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Cross } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { getPillars, getLatestSermons } from '../../lib/queries';
 import PillarGrid from '../../components/public/PillarGrid';
 import SearchBar from '../../components/public/SearchBar';
@@ -8,7 +7,8 @@ import SermonList from '../../components/public/SermonList';
 import { useMeta } from '../../hooks/useMeta';
 
 export default function Home() {
-  useMeta({});
+  const { pathname } = useLocation();
+  useMeta({ url: `${window.location.origin}${pathname}` });
   const [pillars, setPillars] = useState([]);
   const [latest, setLatest] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,28 +27,24 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Hero */}
       <div
-        className="relative py-20 px-4 text-center"
+        className="relative py-7 px-4 text-center"
         style={{
           background: 'linear-gradient(135deg, #FAF6F0 0%, #F5EBE0 50%, #FAF6F0 100%)',
         }}
       >
         <div className="max-w-2xl mx-auto">
-          <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-50 text-primary">
-            <Cross size={24} strokeWidth={2.2} aria-hidden="true" />
-          </div>
-          <h1
-            className="text-4xl md:text-5xl font-bold mb-4 leading-tight"
-            style={{ color: '#8B4513', fontFamily: 'Georgia, serif' }}
-          >
-            Besorah
-          </h1>
+          <img
+            src="/branding/besorah_primary_logo.svg"
+            alt="Besorah — Good News, Organised by Theme"
+            className="h-[4.5rem] sm:h-[5.5rem] md:h-24 w-auto mx-auto mb-3"
+          />
           <p
-            className="text-lg mb-2 font-normal italic"
+            className="text-base mb-2 font-normal italic"
             style={{ color: '#A0856B', fontFamily: 'Georgia, serif' }}
           >
             בְּשׂוֹרָה — Good News, Organised by Theme
           </p>
-          <p className="text-base text-muted font-ui mb-8 max-w-md mx-auto">
+          <p className="text-base text-muted font-ui mb-5 max-w-md mx-auto">
             Discover Christian sermons curated by theme. Find preaching that speaks to where you are.
           </p>
           <SearchBar />

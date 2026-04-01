@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { getPillarBySlug, getSermonsByPillar } from '../../lib/queries';
 import SermonList from '../../components/public/SermonList';
 import { ChevronRight } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useMeta } from '../../hooks/useMeta';
 
 export default function Pillar() {
   const { slug } = useParams();
+  const { pathname } = useLocation();
   const [pillar, setPillar] = useState(null);
   const [sermons, setSermons] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,6 +18,7 @@ export default function Pillar() {
     description: pillar?.description
       ? `${pillar.description} Browse ${sermons.length} sermons on ${pillar.name}.`
       : undefined,
+    url: `${window.location.origin}${pathname}`,
   });
 
   useEffect(() => {
