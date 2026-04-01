@@ -41,6 +41,7 @@ Run the initial migration and seed:
 - [`supabase/migrations/005_refresh_thematic_pillars.sql`](supabase/migrations/005_refresh_thematic_pillars.sql)
 - [`supabase/migrations/006_sermon_custom_title.sql`](supabase/migrations/006_sermon_custom_title.sql)
 - [`supabase/migrations/007_youtube_ingestion.sql`](supabase/migrations/007_youtube_ingestion.sql)
+- [`supabase/migrations/008_fix_youtube_upsert_indexes.sql`](supabase/migrations/008_fix_youtube_upsert_indexes.sql)
 - [`supabase/seed.sql`](supabase/seed.sql)
 
 You can run these using Supabase SQL editor or your local Supabase CLI workflow.
