@@ -1,12 +1,14 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Cross, Search } from 'lucide-react';
 
 export default function Navbar() {
   return (
     <nav className="bg-card-bg border-b border-amber-100 shadow-soft sticky top-0 z-50">
       <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <span className="text-2xl">✝</span>
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-primary">
+            <Cross size={16} strokeWidth={2.2} aria-hidden="true" />
+          </span>
           <span
             className="text-xl font-bold tracking-wide"
             style={{ color: '#8B4513', fontFamily: 'Georgia, serif' }}

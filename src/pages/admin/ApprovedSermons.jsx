@@ -51,7 +51,7 @@ export default function ApprovedSermons() {
               Approved Sermons
             </h1>
             <p className="text-sm text-muted font-ui mt-1">
-              Edit tags, preacher, and church for already approved sermons.
+              Edit titles, tags, preacher, and church for already approved sermons.
             </p>
           </div>
           <p className="text-sm text-muted font-ui">

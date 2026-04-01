@@ -90,6 +90,7 @@ export default function ReviewQueue() {
       await saveAdminSermonReview({
         sermonId,
         reviewStatus,
+        customTitle: sermon.custom_title ?? '',
         preacher: sermon.preacher ?? '',
         church: sermon.church ?? '',
         description: sermon.description ?? '',
@@ -128,6 +129,7 @@ export default function ReviewQueue() {
       const payload = selectedSermons.map((sermon) => ({
         sermonId: sermon.id,
         reviewStatus,
+        customTitle: sermon.custom_title ?? '',
         preacher: sermon.preacher ?? '',
         church: sermon.church ?? '',
         description: sermon.description ?? '',
