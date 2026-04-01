@@ -8,7 +8,7 @@ import {
 } from '../../lib/queries';
 import ReviewQueueTable from '../../components/admin/ReviewQueueTable';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 const PAGE_SIZE = 25;
 
@@ -23,13 +23,31 @@ export default function ReviewQueue() {
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState('');
 
-  const totalPages = Math.max(1, Math.ceil(sermons.length / PAGE_SIZE));
+  const filteredSermons = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sermons;
+
+    return sermons.filter((sermon) => (
+      [
+        sermon.title,
+        sermon.source_title,
+        sermon.preacher,
+        sermon.church,
+        sermon.description,
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(q))
+    ));
+  }, [sermons, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSermons.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageSermons = useMemo(() => {
     const from = (currentPage - 1) * PAGE_SIZE;
-    return sermons.slice(from, from + PAGE_SIZE);
-  }, [sermons, currentPage]);
+    return filteredSermons.slice(from, from + PAGE_SIZE);
+  }, [filteredSermons, currentPage]);
 
   const getDraftPillarIds = useCallback((sermon) => {
     const draft = draftPillarIdsBySermonId[sermon.id];
@@ -236,7 +254,7 @@ export default function ReviewQueue() {
           </h1>
           {!loading && (
             <span className="text-sm text-muted font-ui">
-              {sermons.length} pending
+              {query ? `${filteredSermons.length} match${filteredSermons.length !== 1 ? 'es' : ''}` : `${sermons.length} pending`}
             </span>
           )}
         </div>
@@ -246,6 +264,20 @@ export default function ReviewQueue() {
 
         {error && <p className="text-sm text-red-600 font-ui mb-4">{error}</p>}
         {notice && <p className="text-sm text-green-700 font-ui mb-4">{notice}</p>}
+
+        <div className="relative mb-4">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+            placeholder="Search pending sermons by title, preacher, church, or description"
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-amber-200 bg-white text-sm font-ui focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
 
         <div className="bg-card-bg rounded-2xl p-6 shadow-soft border border-amber-50">
           <ReviewQueueTable
@@ -262,6 +294,7 @@ export default function ReviewQueue() {
             onReviewOne={reviewOne}
             onReviewBulk={reviewBulk}
             onDeleteOne={deleteOne}
+            emptyMessage={query ? 'No pending sermons match this search.' : 'No sermons pending review.'}
           />
         </div>
 

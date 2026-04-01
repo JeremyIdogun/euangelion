@@ -22,6 +22,7 @@ export default function ReviewQueueTable({
   onReviewOne,
   onReviewBulk,
   onDeleteOne,
+  emptyMessage = 'No sermons pending review.',
 }) {
   const [expandedEditorBySermonId, setExpandedEditorBySermonId] = useState({});
   const selectedSet = useMemo(() => new Set(selectedSermonIds), [selectedSermonIds]);
@@ -59,7 +60,7 @@ export default function ReviewQueueTable({
     return (
       <div className="text-center py-10 text-muted font-ui">
         <p className="text-3xl mb-2">✅</p>
-        <p>No sermons pending review.</p>
+        <p>{emptyMessage}</p>
       </div>
     );
   }
