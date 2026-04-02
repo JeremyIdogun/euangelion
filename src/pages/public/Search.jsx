@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, useLocation } from 'react-router-dom';
-import { Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSearchParams, Link, useLocation } from 'react-router-dom';
+import { Search as SearchIcon, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { searchSermons } from '../../lib/queries';
 import SearchBar from '../../components/public/SearchBar';
 import SermonList from '../../components/public/SermonList';
@@ -17,6 +17,7 @@ export default function Search() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [error, setError] = useState(null);
   const { pathname, search } = useLocation();
 
   useMeta({
@@ -28,12 +29,13 @@ export default function Search() {
     if (!q) return;
     setLoading(true);
     setSearched(true);
+    setError(null);
     searchSermons(q, { page, pageSize: PAGE_SIZE })
       .then(({ sermons: results, total: count }) => {
         setSermons(results);
         setTotal(count);
       })
-      .catch(console.error)
+      .catch(() => setError('Search failed. Please try again.'))
       .finally(() => setLoading(false));
   }, [q, page]);
 
@@ -65,7 +67,20 @@ export default function Search() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-10">
-        {q && (
+        {error && (
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-center mb-6">
+            <p className="text-sm text-red-800 font-ui mb-3">{error}</p>
+            <button
+              onClick={() => setSearchParams({ q, page: String(page) })}
+              className="inline-flex items-center gap-2 text-sm font-ui font-medium text-red-700 hover:text-red-900 transition-colors"
+            >
+              <RefreshCw size={14} />
+              Retry
+            </button>
+          </div>
+        )}
+
+        {q && !error && (
           <p className="text-sm text-muted font-ui mb-6">
             {loading
               ? 'Searching…'
@@ -73,6 +88,23 @@ export default function Search() {
               ? `No results for "${q}"`
               : `Showing ${from}–${to} of ${total} result${total !== 1 ? 's' : ''} for "${q}"`}
           </p>
+        )}
+
+        {/* Empty result suggestions */}
+        {q && !loading && !error && total === 0 && searched && (
+          <div className="text-center py-10 text-muted font-ui">
+            <p className="mb-4">No sermons matched your search.</p>
+            <div className="flex items-center justify-center gap-3">
+              <Link to="/" className="text-sm text-accent hover:text-primary transition-colors">Browse by theme</Link>
+              <span className="text-muted/40">·</span>
+              <button
+                onClick={() => { setSearchParams({}); setSearched(false); setSermons([]); setTotal(0); }}
+                className="text-sm text-accent hover:text-primary transition-colors"
+              >
+                Clear search
+              </button>
+            </div>
+          </div>
         )}
 
         {!q && !searched && (

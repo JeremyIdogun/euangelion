@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { RefreshCw } from 'lucide-react';
 import { getPillars, getLatestSermons } from '../../lib/queries';
 import PillarGrid from '../../components/public/PillarGrid';
 import SearchBar from '../../components/public/SearchBar';
@@ -12,16 +13,21 @@ export default function Home() {
   const [pillars, setPillars] = useState([]);
   const [latest, setLatest] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  function fetchData() {
+    setLoading(true);
+    setError(null);
     Promise.all([getPillars(), getLatestSermons(6)])
       .then(([p, s]) => {
         setPillars(p);
         setLatest(s);
       })
-      .catch(console.error)
+      .catch(() => setError('Unable to load content. Please try again.'))
       .finally(() => setLoading(false));
-  }, []);
+  }
+
+  useEffect(() => { fetchData(); }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,6 +58,19 @@ export default function Home() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-12">
+        {error && (
+          <div className="mb-10 rounded-2xl border border-red-100 bg-red-50 p-6 text-center">
+            <p className="text-sm text-red-800 font-ui mb-3">{error}</p>
+            <button
+              onClick={fetchData}
+              className="inline-flex items-center gap-2 text-sm font-ui font-medium text-red-700 hover:text-red-900 transition-colors"
+            >
+              <RefreshCw size={14} />
+              Retry
+            </button>
+          </div>
+        )}
+
         <section className="mb-10 rounded-2xl border border-amber-100 bg-white/90 p-6 sm:p-8 shadow-soft">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p
@@ -82,7 +101,7 @@ export default function Home() {
           </p>
           {loading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {Array.from({ length: 11 }).map((_, i) => (
+              {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-36 bg-card-bg rounded-2xl animate-pulse" />
               ))}
             </div>

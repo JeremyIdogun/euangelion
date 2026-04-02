@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 import Navbar from './components/public/Navbar';
+import Footer from './components/public/Footer';
 import Home from './pages/public/Home';
 import Pillar from './pages/public/Pillar';
 import Search from './pages/public/Search';
 import SermonDetail from './pages/public/SermonDetail';
+import About from './pages/public/About';
 import Dashboard from './pages/admin/Dashboard';
 import AdminLogin from './pages/admin/Login';
 import Shows from './pages/admin/Shows';
@@ -19,7 +21,8 @@ function PublicLayout({ children }) {
   return (
     <>
       <Navbar />
-      <main>{children}</main>
+      <main className="flex-1">{children}</main>
+      <Footer />
     </>
   );
 }
@@ -58,6 +61,14 @@ export default function App() {
           element={
             <PublicLayout>
               <SermonDetail />
+            </PublicLayout>
+          }
+        />
+        <Route
+          path="/about"
+          element={
+            <PublicLayout>
+              <About />
             </PublicLayout>
           }
         />

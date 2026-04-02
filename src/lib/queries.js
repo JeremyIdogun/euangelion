@@ -105,6 +105,21 @@ export async function getLatestSermons(limit = 6) {
   return (data || []).map((sermon) => withDisplayTitle(sermon));
 }
 
+export async function getRelatedSermons(sermonId, pillarId, limit = 3) {
+  if (!pillarId) return [];
+  const { data, error } = await supabase
+    .from('sermon_pillars')
+    .select('sermons!inner(*)')
+    .eq('pillar_id', pillarId)
+    .eq('sermons.review_status', 'approved')
+    .neq('sermons.id', sermonId)
+    .limit(limit);
+  if (error) throw error;
+  return data
+    .map((row) => withDisplayTitle(row.sermons))
+    .filter(Boolean);
+}
+
 // ── Admin queries ─────────────────────────────────────────────────────────────
 
 async function adminFetch(path, options = {}) {
