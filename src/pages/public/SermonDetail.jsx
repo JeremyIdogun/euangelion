@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { getSermonById, getRelatedSermons } from '../../lib/queries';
+import { getSermonById, getRelatedSermons, logSermonView } from '../../lib/queries';
 import { ExternalLink, ChevronRight, Calendar, User, Church, Video, Headphones, Share2, Check } from 'lucide-react';
 import SermonCard from '../../components/public/SermonCard';
 import { useMeta } from '../../hooks/useMeta';
@@ -45,6 +45,9 @@ export default function SermonDetail() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // Log page view (fire-and-forget)
+    logSermonView(id, 'page_view');
   }, [id]);
 
   if (loading) {
@@ -172,6 +175,7 @@ export default function SermonDetail() {
                   href={sermon.external_url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => logSermonView(sermon.id, 'cta_click')}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-ui font-medium rounded-xl hover:bg-accent transition-colors"
                 >
                   <span>{externalCtaLabel}</span>

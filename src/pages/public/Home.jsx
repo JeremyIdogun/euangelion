@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
-import { getPillars, getLatestSermons } from '../../lib/queries';
+import { getPillars, getLatestSermons, getPopularSermons } from '../../lib/queries';
 import PillarGrid from '../../components/public/PillarGrid';
 import SearchBar from '../../components/public/SearchBar';
 import SermonList from '../../components/public/SermonList';
@@ -12,16 +12,18 @@ export default function Home() {
   useMeta({ url: `${window.location.origin}${pathname}` });
   const [pillars, setPillars] = useState([]);
   const [latest, setLatest] = useState([]);
+  const [popular, setPopular] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   function fetchData() {
     setLoading(true);
     setError(null);
-    Promise.all([getPillars(), getLatestSermons(6)])
-      .then(([p, s]) => {
+    Promise.all([getPillars(), getLatestSermons(6), getPopularSermons(3)])
+      .then(([p, s, pop]) => {
         setPillars(p);
         setLatest(s);
+        setPopular(pop);
       })
       .catch(() => setError('Unable to load content. Please try again.'))
       .finally(() => setLoading(false));
@@ -109,6 +111,22 @@ export default function Home() {
             <PillarGrid pillars={pillars} />
           )}
         </section>
+
+        {/* Popular */}
+        {popular.length > 0 && (
+          <section className="mb-14">
+            <h2
+              className="text-2xl font-bold mb-2"
+              style={{ color: '#8B4513', fontFamily: 'Georgia, serif' }}
+            >
+              Popular Sermons
+            </h2>
+            <p className="text-muted text-sm font-ui mb-6">
+              Most listened-to and watched sermons on Besorah.
+            </p>
+            <SermonList sermons={popular} loading={false} />
+          </section>
+        )}
 
         {/* Latest */}
         {(latest.length > 0 || loading) && (

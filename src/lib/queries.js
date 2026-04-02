@@ -120,6 +120,20 @@ export async function getRelatedSermons(sermonId, pillarId, limit = 3) {
     .filter(Boolean);
 }
 
+// ── View tracking ────────────────────────────────────────────────────────────
+
+export async function logSermonView(sermonId, viewType = 'page_view') {
+  await supabase
+    .from('sermon_views')
+    .insert({ sermon_id: sermonId, view_type: viewType });
+}
+
+export async function getPopularSermons(limit = 3) {
+  const { data, error } = await supabase.rpc('get_popular_sermons', { lim: limit });
+  if (error) throw error;
+  return (data || []).map((sermon) => withDisplayTitle(sermon));
+}
+
 // ── Admin queries ─────────────────────────────────────────────────────────────
 
 async function adminFetch(path, options = {}) {
