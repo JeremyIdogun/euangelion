@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { BookOpen } from 'lucide-react';
 import SermonCard from './SermonCard';
 
 export default function SermonList({ sermons, loading = false }) {
@@ -14,8 +16,13 @@ export default function SermonList({ sermons, loading = false }) {
   if (!sermons?.length) {
     return (
       <div className="text-center py-16 text-muted font-ui">
-        <p className="text-4xl mb-3">📖</p>
-        <p>No sermons found.</p>
+        <BookOpen size={28} className="mx-auto mb-3 text-muted/60" />
+        <p className="mb-4">No sermons found.</p>
+        <div className="flex items-center justify-center gap-3">
+          <Link to="/" className="text-sm text-accent hover:text-primary transition-colors">Browse by theme</Link>
+          <span className="text-muted/40">·</span>
+          <Link to="/search" className="text-sm text-accent hover:text-primary transition-colors">Try a search</Link>
+        </div>
       </div>
     );
   }

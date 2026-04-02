@@ -8,15 +8,12 @@ export default function PillarCard({ pillar }) {
       to={`/pillar/${slug}`}
       className="group block bg-card-bg rounded-2xl p-6 shadow-soft hover:shadow-card transition-all duration-200 hover:-translate-y-0.5 border border-amber-50"
     >
-      <div className="flex items-start justify-between mb-3">
-        <span className="text-sm font-ui font-medium uppercase tracking-wide text-muted">
-          Theme
-        </span>
+      <div className="flex items-start justify-end mb-3">
         <span
           className="text-xs font-ui font-medium px-2 py-1 rounded-full text-white"
           style={{ backgroundColor: color }}
         >
-          {sermon_count ?? 0} sermons
+          {sermon_count ?? 0} sermon{(sermon_count ?? 0) !== 1 ? 's' : ''}
         </span>
       </div>
 

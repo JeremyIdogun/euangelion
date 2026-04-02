@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { getSermonById } from '../../lib/queries';
+import { getSermonById, getRelatedSermons } from '../../lib/queries';
 import { ExternalLink, ChevronRight, Calendar, User, Church, Video, Headphones } from 'lucide-react';
+import SermonCard from '../../components/public/SermonCard';
 import { useMeta } from '../../hooks/useMeta';
 
 function formatDate(d) {
@@ -13,6 +14,7 @@ export default function SermonDetail() {
   const { id } = useParams();
   const { pathname } = useLocation();
   const [sermon, setSermon] = useState(null);
+  const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -25,8 +27,16 @@ export default function SermonDetail() {
   });
 
   useEffect(() => {
+    setLoading(true);
+    setRelated([]);
     getSermonById(id)
-      .then(setSermon)
+      .then((s) => {
+        setSermon(s);
+        const pillarId = s?.sermon_pillars?.[0]?.pillar_id;
+        if (pillarId) {
+          getRelatedSermons(s.id, pillarId, 3).then(setRelated).catch(() => {});
+        }
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
@@ -64,7 +74,7 @@ export default function SermonDetail() {
     : platform === 'spotify'
       ? Headphones
       : ExternalLink;
-  const embedHeight = sermon.platform === 'youtube' ? 360 : 152;
+  const isYouTube = sermon.platform === 'youtube';
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,21 +174,60 @@ export default function SermonDetail() {
 
             {/* Platform embed */}
             {embedUrl && (
-              <div className="rounded-xl overflow-hidden">
-                <iframe
-                  src={embedUrl}
-                  width="100%"
-                  height={embedHeight}
-                  frameBorder="0"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  title={sermon.title}
-                  allowFullScreen={sermon.platform === 'youtube'}
-                />
-              </div>
+              isYouTube ? (
+                <div className="rounded-xl overflow-hidden" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                  <iframe
+                    src={embedUrl}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    frameBorder="0"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    loading="lazy"
+                    title={sermon.title}
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <div className="rounded-xl overflow-hidden">
+                  <iframe
+                    src={embedUrl}
+                    width="100%"
+                    height={152}
+                    frameBorder="0"
+                    allow="autoplay; clipboard-write; encrypted-media"
+                    loading="lazy"
+                    title={sermon.title}
+                  />
+                </div>
+              )
             )}
           </div>
         </div>
+
+        {/* Related sermons */}
+        {related.length > 0 && firstPillar && (
+          <section className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2
+                className="text-xl font-bold"
+                style={{ color: '#8B4513', fontFamily: 'Georgia, serif' }}
+              >
+                More in {firstPillar.name}
+              </h2>
+              <Link
+                to={`/pillar/${firstPillar.slug}`}
+                className="text-sm font-ui text-accent hover:text-primary transition-colors"
+              >
+                View all
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {related.map((s) => {
+                const sPillars = s.sermon_pillars?.map((sp) => sp.pillars).filter(Boolean) ?? [];
+                return <SermonCard key={s.id} sermon={s} pillars={sPillars} />;
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
